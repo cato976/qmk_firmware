@@ -1,10 +1,9 @@
 #include QMK_KEYBOARD_H
-#include <stdio.h>
 #include <string.h>
 #include "eeprom.h"
 #include "debug.h"
 #include "action_layer.h"
-//#include "simple_visualizer.h"
+//#include "avr/hd44780.h"
 
 //#define BASE 0 // default layer
 //#define TARMAK 1 // tarmak
@@ -40,7 +39,7 @@ uint32_t click_count;
 char lcd2[17];
 uint32_t last_save_time = 0;
 uint32_t last_click_count;
-const uint32_t START_CLICK_COUNT = 13900;
+const uint32_t START_CLICK_COUNT = 139;
 
 //Tap Dance Definitions
 qk_tap_dance_action_t tap_dance_actions[] = {
@@ -272,9 +271,25 @@ const uint16_t PROGMEM fn_actions[] = {
 };
 
 
-void display_key_count(void)
+void save_click_count(bool ignore_time)
 {
-    sprintf(lcd2, "%16d", (int)click_count);
+    // If no more key clicks, don't bother saving
+    if (last_click_count != click_count) {
+        //Note: The ATMEGA32u4 has a limited number of writes before the memory becomes
+        //unstable.  This routine attempts to limit the number of saves for that reason
+
+        // if already saved in the last time period, don't bother saving
+        uint32_t cur_time = timer_read32();
+        eeprom_update_dword(EECONFIG_CLICK_COUNT, click_count);
+        if (cur_time - last_save_time > 3600000 || ignore_time) { //if unsaved for an hour (3600000) ->3 min (180000)
+            //update will only write if the value differs in the eeprom
+            eeprom_update_dword(EECONFIG_CLICK_COUNT, click_count);
+
+            click_count = 0;
+            last_click_count = click_count;
+            last_save_time = cur_time;
+        }
+    }
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
@@ -282,7 +297,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
     if(record->event.pressed)
     {
         click_count++;
-        display_key_count();
+        save_click_count(false);
     }
 
     switch(keycode) {
@@ -303,40 +318,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
     return true;
 };
 
-
-
-//void display_key_count(void) {
-//    lcd_goto(0x40);
-//    sprintf(lcd_cc, "%16lu", (long)click_count);
-//    lcd_puts(lcd_cc);
-//}
-
-//const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt)
-//{
-//    // MACRODOWN only works in this function
-//    if ( record->event.pressed) {
-//        switch(id) {
-//            case 0:
-//                if (record->event.pressed) {
-//                    register_code(KC_RSFT);
-//                } else {
-//                    unregister_code(KC_RSFT);
-//                }
-//                break;
-//        }
-//    }
-//    return MACRO_NONE;
-//};
-
 // Runs just one time when the keyboard initializes.
 void matrix_init_user(void) 
 {
     //click_count = eeprom_read_dword(EECONFIG_CLICK_COUNT);
-    //click_count = START_CLICK_COUNT > click_count ? START_CLICK_COUNT : click_count;
+    click_count = START_CLICK_COUNT > click_count ? START_CLICK_COUNT : click_count;
 
-    //last_click_count = click_count;
-    //last_save_time = timer_read32();
+    last_click_count = click_count;
+    last_save_time = timer_read32();
+    //lcd_init(LCD_DISP_OFF);
     //memset(lcd2,0,sizeof(lcd2));
+    save_click_count(true);
     //lcd_init();
     //lcd_clrscr();
     //lcd_print(16, "Keyboard is up!");
@@ -346,6 +338,13 @@ void matrix_init_user(void)
 
 //
 //// Runs constantly in the background, in a loop.
+void matrix_scan_user(void){
+    //if(record->event.pressed)
+    //{
+    //    save_click_count(false);
+    //}
+}
+
 //void matrix_scan_user(void) {
 //
 //    //uint8_t layer = biton32(layer_state);
