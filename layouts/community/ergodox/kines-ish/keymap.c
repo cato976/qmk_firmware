@@ -1,6 +1,9 @@
 #include QMK_KEYBOARD_H
+#include <string.h>
+#include "eeprom.h"
 #include "debug.h"
 #include "action_layer.h"
+//#include "avr/hd44780.h"
 
 //#define BASE 0 // default layer
 //#define TARMAK 1 // tarmak
@@ -32,11 +35,17 @@ enum _ergodox_layers {
     _MACRO
 };
 
+uint32_t click_count;
+char lcd2[17];
+uint32_t last_save_time = 0;
+uint32_t last_click_count;
+const uint32_t START_CLICK_COUNT = 139;
+
 //Tap Dance Definitions
 qk_tap_dance_action_t tap_dance_actions[] = {
     //Tap once for Esc, twice for Caps Lock
     [TD_ESC_CAPS]  = ACTION_TAP_DANCE_DOUBLE(KC_ESC, KC_CAPS)
-    // Other declarations would go here, separated by commas, if you have them
+        // Other declarations would go here, separated by commas, if you have them
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -76,9 +85,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
             // right hand
             LALT(KC_RGHT), KC_6,   KC_7,   KC_8,   KC_9,   KC_0,     KC_MINS,
             TG(_MDIA_MOUSE),KC_Y,  KC_U,   KC_I,   KC_O,   KC_P,     KC_BSLS,
-                           KC_H,   KC_J,   KC_K,   KC_L,   KC_SCLN,  KC_QUOT,
+            KC_H,   KC_J,   KC_K,   KC_L,   KC_SCLN,  KC_QUOT,
             TG(_COLEMAK),  KC_N,   KC_M,   KC_COMM,KC_DOT, KC_SLSH,  KC_RSFT,
-                                   KC_UP,  KC_DOWN,KC_LBRC,KC_RBRC,  KC_FN1,
+            KC_UP,  KC_DOWN,KC_LBRC,KC_RBRC,  KC_FN1,
             KC_LGUI, KC_RCTL,
             KC_PGUP,
             KC_PGDN, KC_ENT, KC_SPC
@@ -119,9 +128,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
             // right hand
             LGUI(LCTL(KC_RGHT)),KC_6,         KC_7,   KC_8,   KC_9,   KC_0,   KC_MINS,
             TG(_MDIA_MOUSE),    KC_J,         KC_L,   KC_U,   KC_Y,   KC_SCLN,KC_BSLS,
-                                KC_H,         KC_N,   KC_E,   KC_I,   FN_O,   KC_QUOT,
+            KC_H,         KC_N,   KC_E,   KC_I,   FN_O,   KC_QUOT,
             KC_TRNS,            KC_K,         KC_M,   KC_COMM,KC_DOT, CTL_T(KC_SLSH),   KC_RSFT,
-                                          KC_UP,  KC_DOWN,KC_LBRC,KC_RBRC,KC_FN1,
+            KC_UP,  KC_DOWN,KC_LBRC,KC_RBRC,KC_FN1,
             KC_LGUI,        CTL_T(KC_ESC),
             KC_PGUP,
             KC_PGDN,KC_ENT, KC_SPC
@@ -160,9 +169,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
             // right hand
             KC_TRNS,  KC_TRNS, KC_ACL0, KC_ACL1, KC_ACL2, KC_TRNS, BL_INC,
             KC_TRNS,  KC_TRNS, KC_WH_U, KC_WH_L, KC_WH_R, KC_TRNS, BL_DEC,
-                      KC_TRNS, KC_BTN1, KC_BTN2, KC_TRNS, KC_TRNS, KC_MPLY,
+            KC_TRNS, KC_BTN1, KC_BTN2, KC_TRNS, KC_TRNS, KC_MPLY,
             BL_ON,    KC_TRNS, KC_WH_D, KC_MPRV, KC_MNXT, KC_TRNS, KC_TRNS,
-                               KC_VOLU, KC_VOLD, KC_MUTE, RESET,   KC_TRNS,
+            KC_VOLU, KC_VOLD, KC_MUTE, RESET,   KC_TRNS,
 
             KC_TRNS, KC_TRNS,
             KC_TRNS,
@@ -203,35 +212,35 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
             // right hand
             KC_TRNS, KC_F6,   KC_F7,  KC_F8,   KC_F9,   KC_F10,  KC_F11,
             KC_TRNS, KC_UP,   KC_P7,  KC_P8,   KC_P9,   KC_PAST, KC_F12,
-                     KC_DOWN, KC_P4,  KC_P5,   KC_P6,   KC_PPLS, KC_TRNS,
+            KC_DOWN, KC_P4,  KC_P5,   KC_P6,   KC_PPLS, KC_TRNS,
             KC_TRNS, KC_AMPR, KC_P1,  KC_P2,   KC_P3,   KC_PSLS, KC_TRNS,
-                              KC_TRNS,KC_PDOT, KC_P0,   KC_EQL,  KC_TRNS,
+            KC_TRNS,KC_PDOT, KC_P0,   KC_EQL,  KC_TRNS,
             KC_TRNS, KC_TRNS,
             KC_TRNS,
             KC_TRNS, KC_TRNS, KC_TRNS
             ),
 
-    /* Keymap 4: Macros
-     *
-     * ,--------------------------------------------------.           ,--------------------------------------------------.
-     * |        |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
-     * |--------+------+------+------+------+-------------|           |------+------+------+------+------+------+--------|
-     * |        |      |      |      |      |      |      |           |      |      |      |      |      | PASS |        |
-     * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
-     * |        |      |      |      |      |      |------|           |------|      |      |      |      |      |        |
-     * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
-     * |        |      |      |CMDR  |      |BREATH|      |           |      |      |      |      |      |      |        |
-     * `--------+------+------+------+------+-------------'           `-------------+------+------+------+------+--------'
-     *   |      |      |      |      |ST_BRT|                                       |      |      |      |      |      |
-     *   `----------------------------------'                                       `----------------------------------'
-     *                                        ,-------------.       ,-------------.
-     *                                        |      |      |       |      |      |
-     *                                 ,------|------|------|       |------+------+------.
-     *                                 |      |      |      |       |      |      |      |
-     *                                 |      |      |------|       |------|      |      |
-     *                                 |      |      |      |       |      |      |      |
-     *                                 `--------------------'       `--------------------'
-     */
+            /* Keymap 4: Macros
+             *
+             * ,--------------------------------------------------.           ,--------------------------------------------------.
+             * |        |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
+             * |--------+------+------+------+------+-------------|           |------+------+------+------+------+------+--------|
+             * |        |      |      |      |      |      |      |           |      |      |      |      |      | PASS |        |
+             * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
+             * |        |      |      |      |      |      |------|           |------|      |      |      |      |      |        |
+             * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
+             * |        |      |      |CMDR  |      |BREATH|      |           |      |      |      |      |      |      |        |
+             * `--------+------+------+------+------+-------------'           `-------------+------+------+------+------+--------'
+             *   |      |      |      |      |ST_BRT|                                       |      |      |      |      |      |
+             *   `----------------------------------'                                       `----------------------------------'
+             *                                        ,-------------.       ,-------------.
+             *                                        |      |      |       |      |      |
+             *                                 ,------|------|------|       |------+------+------.
+             *                                 |      |      |      |       |      |      |      |
+             *                                 |      |      |------|       |------|      |      |
+             *                                 |      |      |      |       |      |      |      |
+             *                                 `--------------------'       `--------------------'
+             */
     // MACROS
     [_MACRO] = LAYOUT_ergodox(
             KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,        KC_TRNS, KC_TRNS, KC_TRNS,
@@ -245,9 +254,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
             // right hand
             KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
             KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, VERT_PASS, KC_TRNS,
-                      KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+            KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
             KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-                               KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+            KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
 
             KC_TRNS, KC_TRNS,
             KC_TRNS,
@@ -261,7 +270,36 @@ const uint16_t PROGMEM fn_actions[] = {
     [3] = ACTION_LAYER_TAP_TOGGLE(_MACRO)               // FN3 - Momentary Layer 3 (Macro)
 };
 
+
+void save_click_count(bool ignore_time)
+{
+    // If no more key clicks, don't bother saving
+    if (last_click_count != click_count) {
+        //Note: The ATMEGA32u4 has a limited number of writes before the memory becomes
+        //unstable.  This routine attempts to limit the number of saves for that reason
+
+        // if already saved in the last time period, don't bother saving
+        uint32_t cur_time = timer_read32();
+        eeprom_update_dword(EECONFIG_CLICK_COUNT, click_count);
+        if (cur_time - last_save_time > 3600000 || ignore_time) { //if unsaved for an hour (3600000) ->3 min (180000)
+            //update will only write if the value differs in the eeprom
+            eeprom_update_dword(EECONFIG_CLICK_COUNT, click_count);
+
+            click_count = 0;
+            last_click_count = click_count;
+            last_save_time = cur_time;
+        }
+    }
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
+    // Display key click count
+    if(record->event.pressed)
+    {
+        click_count++;
+        save_click_count(false);
+    }
+
     switch(keycode) {
         case CMDER:
             if ( record->event.pressed) {
@@ -280,29 +318,33 @@ bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
     return true;
 };
 
-//const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt)
-//{
-//    // MACRODOWN only works in this function
-//    if ( record->event.pressed) {
-//        switch(id) {
-//            case 0:
-//                if (record->event.pressed) {
-//                    register_code(KC_RSFT);
-//                } else {
-//                    unregister_code(KC_RSFT);
-//                }
-//                break;
-//        }
-//    }
-//    return MACRO_NONE;
-//};
-//
-//// Runs just one time when the keyboard initializes.
-//void matrix_init_user(void) {
-//
-//};
+// Runs just one time when the keyboard initializes.
+void matrix_init_user(void) 
+{
+    //click_count = eeprom_read_dword(EECONFIG_CLICK_COUNT);
+    click_count = START_CLICK_COUNT > click_count ? START_CLICK_COUNT : click_count;
+
+    last_click_count = click_count;
+    last_save_time = timer_read32();
+    //lcd_init(LCD_DISP_OFF);
+    //memset(lcd2,0,sizeof(lcd2));
+    save_click_count(true);
+    //lcd_init();
+    //lcd_clrscr();
+    //lcd_print(16, "Keyboard is up!");
+    //visualizer_state_t state = {.layer_text="What the hey"};
+    //get_visualizer_layer_and_color(&state);
+}
+
 //
 //// Runs constantly in the background, in a loop.
+void matrix_scan_user(void){
+    //if(record->event.pressed)
+    //{
+    //    save_click_count(false);
+    //}
+}
+
 //void matrix_scan_user(void) {
 //
 //    //uint8_t layer = biton32(layer_state);

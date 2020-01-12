@@ -12,8 +12,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "syscalls.c"
+#include <string.h>
 #include "util.h"
 #include "simple_visualizer.h"
+#include "eeprom.h"
+#include "eeconfig.h"
 
 enum _ergodox_layers {
     _QWERTY,
@@ -37,26 +41,46 @@ static void get_visualizer_layer_and_color(visualizer_state_t* state) {
 
     uint8_t layer = biton32(state->status.layer);
 
+    int click_count = eeprom_read_dword(EECONFIG_CLICK_COUNT);
+    char* s = "Default  ";
+    char *p;
+    char snum[7];
+    for(int i = 0; i < 7; i++)
+    {
+        snum[i] = '\0';
+    }
+
     switch(layer) {
         case _COLEMAK:
-        state->target_lcd_color = LCD_COLOR(84, saturation, 0xFF);
-        state->layer_text = "Colemak";
+            state->target_lcd_color = LCD_COLOR(84, saturation, 0xFF);
+            s = "Colemak ";
+            p = malloc(7);
+            strcpy(p, s); // puts string into buffer
+            itoa(click_count, snum, 7);
+            strcat(p, snum);
+            state->layer_text = p;
+            free(p);
         break;
         case _SYMB:
-        state->target_lcd_color = LCD_COLOR(214, saturation, 0xFF);
-        state->layer_text = "Symbols";
+            state->target_lcd_color = LCD_COLOR(214, saturation, 0xFF);
+            state->layer_text = "Symbols";
         break;
         case _MDIA_MOUSE:
-        state->target_lcd_color = LCD_COLOR(130, saturation, 0xFF);
-        state->layer_text = "Media & Mouse";
+            state->target_lcd_color = LCD_COLOR(130, saturation, 0xFF);
+            state->layer_text = "Media & Mouse";
         break;
         case _MACRO:
-        state->target_lcd_color = LCD_COLOR(130, saturation, 0xFF);
-        state->layer_text = "Macro";
+            state->target_lcd_color = LCD_COLOR(130, saturation, 0xFF);
+            state->layer_text = "Macro";
         break;
         default:
-        state->target_lcd_color = LCD_COLOR(84, saturation, 0xFF);
-        state->layer_text = "Default";
+            state->target_lcd_color = LCD_COLOR(84, saturation, 0xFF);
+            p = malloc(7);
+            strcpy(p, s); // puts string into buffer
+            itoa(click_count, snum, 7);
+            strcat(p, snum);
+            state->layer_text = p;
+            free(p);
         break;
     }
 }
