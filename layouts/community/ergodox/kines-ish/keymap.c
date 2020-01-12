@@ -3,7 +3,6 @@
 #include "eeprom.h"
 #include "debug.h"
 #include "action_layer.h"
-//#include "avr/hd44780.h"
 
 //#define BASE 0 // default layer
 //#define TARMAK 1 // tarmak
@@ -15,6 +14,11 @@
 #define M_STOP_BREATHING M(3)
 #define FN_O LT(2,KC_O)
 
+typedef struct {
+    bool is_press_action;
+    int state;
+} tap;
+
 enum custom_keycodes {
     CMDER = SAFE_RANGE,
     VERT_PASS
@@ -22,8 +26,18 @@ enum custom_keycodes {
 
 //Tap Dance Declarations
 enum {
+    SINGLE_TAP = 1,
+    SINGLE_HOLD = 2,
+    DOUBLE_TAP = 3,
+    DOUBLE_HOLD = 4,
+    TRIPLE_TAP = 5,
+    TRIPLE_HOLD = 6
+};
+
+enum {
     TD_ESC_CAPS = 0,
-    TD_SYM_COLEMAK
+    TD_SYM_COLEMAK,
+    ALT_OSL1
 };
 
 enum _ergodox_layers {
@@ -41,11 +55,16 @@ uint32_t last_save_time = 0;
 uint32_t last_click_count;
 const uint32_t START_CLICK_COUNT = 139;
 
+int cur_dance (qk_tap_dance_state_t *state);
+void alt_finished (qk_tap_dance_state_t *state, void *user_data);
+void alt_reset (qk_tap_dance_state_t *state, void *user_data);
+
 //Tap Dance Definitions
 qk_tap_dance_action_t tap_dance_actions[] = {
     //Tap once for Esc, twice for Caps Lock
-    [TD_ESC_CAPS]  = ACTION_TAP_DANCE_DOUBLE(KC_ESC, KC_CAPS)
-        // Other declarations would go here, separated by commas, if you have them
+    [TD_ESC_CAPS]  = ACTION_TAP_DANCE_DOUBLE(KC_ESC, KC_CAPS),
+    // Other declarations would go here, separated by commas, if you have them
+    [ALT_OSL1] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, alt_finished, alt_reset)
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -122,7 +141,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
             TD(TD_ESC_CAPS),KC_A,         KC_R,   KC_S,   KC_T,   KC_D,
             KC_LSFT,        CTL_T(KC_Z),  KC_X,   KC_C,   KC_V,   KC_B,   KC_FN3,
             KC_FN2,KC_GRV,   KC_INS, KC_LEFT,KC_RGHT,
-            KC_LCTL,KC_LALT,
+            KC_LCTL,TD(ALT_OSL1),
             KC_HOME,
             KC_BSPC,KC_DEL,KC_END,
             // right hand
@@ -293,6 +312,7 @@ void save_click_count(bool ignore_time)
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
+
     // Display key click count
     if(record->event.pressed)
     {
@@ -314,6 +334,31 @@ bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
                 return false;
             }
             break;
+        default:
+            return true;
+            break;
+    }
+    return true;
+}
+
+bool process_record_keymap(uint16_t keycode, keyrecord_t *  record) {
+    switch(keycode) {
+        case KC_TRNS:
+        case KC_NO:
+            /* Always cancel one-shot layer when another key gets pressed */
+            if (record->event.pressed && is_oneshot_layer_active())
+                clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
+            return true;
+        case RESET:
+            /* Don't allow reset from oneshot layer state */
+            if (record->event.pressed && is_oneshot_layer_active()){
+                clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
+                return false;
+            }   
+            return true;
+        default:
+            return true;
+            break;
     }
     return true;
 };
@@ -329,14 +374,8 @@ void matrix_init_user(void)
     //lcd_init(LCD_DISP_OFF);
     //memset(lcd2,0,sizeof(lcd2));
     save_click_count(true);
-    //lcd_init();
-    //lcd_clrscr();
-    //lcd_print(16, "Keyboard is up!");
-    //visualizer_state_t state = {.layer_text="What the hey"};
-    //get_visualizer_layer_and_color(&state);
 }
 
-//
 //// Runs constantly in the background, in a loop.
 void matrix_scan_user(void){
     //if(record->event.pressed)
@@ -345,25 +384,46 @@ void matrix_scan_user(void){
     //}
 }
 
-//void matrix_scan_user(void) {
-//
-//    //uint8_t layer = biton32(layer_state);
-//
-//    // ergodox_board_led_off();
-//    // ergodox_right_led_1_off();
-//    // ergodox_right_led_2_off();
-//    // ergodox_right_led_3_off();
-//    // switch (layer) {
-//    //   // TODO: Make this relevant to the ErgoDox EZ.
-//    //     case 1:
-//    //         ergodox_right_led_1_on();
-//    //         break;
-//    //     case 2:
-//    //         ergodox_right_led_2_on();
-//    //         break;
-//    //     default:
-//    //         // none
-//    //         break;
-//    // }
-//
-//};
+static tap alttap_state = {
+    .is_press_action = true,
+    .state = 0
+};
+
+int cur_dance (qk_tap_dance_state_t *state) {
+    if (state->count == 1) {
+        if (state->pressed) return SINGLE_HOLD;
+        else return SINGLE_TAP;
+    }
+    else if (state->count == 2) {
+        if (state->pressed) return DOUBLE_HOLD;
+        else return DOUBLE_TAP;
+    }
+    else if (state->count == 3) {
+        if (state->interrupted || !state->pressed)  return TRIPLE_TAP;
+        else return TRIPLE_HOLD;
+    }
+    else return 8;
+}
+
+void alt_finished (qk_tap_dance_state_t *state, void *user_data) {
+    alttap_state.state = cur_dance(state);
+    switch (alttap_state.state) {
+        case SINGLE_TAP: set_oneshot_layer(1, ONESHOT_START); clear_oneshot_layer_state(ONESHOT_PRESSED); break;
+        case SINGLE_HOLD: register_code(KC_LALT); break;
+        case DOUBLE_TAP: set_oneshot_layer(1, ONESHOT_START); set_oneshot_layer(1, ONESHOT_PRESSED); break;
+        case DOUBLE_HOLD: register_code(KC_LALT); layer_on(1); break;
+                          //Last case is for fast typing. Assuming your key is `f`:
+                          //For example, when typing the word `buffer`, and you want to make sure that you send `ff` and not `Esc`.
+                          //In order to type `ff` when typing fast, the next character will have to be hit within the `TAPPING_TERM`, which by default is 200ms.
+    }
+}
+
+void alt_reset (qk_tap_dance_state_t *state, void *user_data) {
+    switch (alttap_state.state) {
+        case SINGLE_TAP: break;
+        case SINGLE_HOLD: unregister_code(KC_LALT); break;
+        case DOUBLE_TAP: break;
+        case DOUBLE_HOLD: layer_off(1); unregister_code(KC_LALT); break;
+    }
+    alttap_state.state = 0;
+}
