@@ -6,9 +6,10 @@
 
 /*#define _QWERTY 0*/
 /*#define _LOWER 1*/
-#define _RAISE 2
+//#define _RAISE 2
 
-#define RAISE MO(_RAISE)
+//#define RAISE MO(_RAISE)
+#define FN_O LT(_MDIA_MOUSE,KC_O)
 /*#define LOWER MO(_LOWER)*/
 
 typedef struct {
@@ -96,7 +97,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [_COLEMAK] = LAYOUT_5x6(
      KC_EQL         , KC_1       , KC_2  , KC_3  , KC_4  , KC_5  ,                         KC_6  , KC_7  , KC_8  , KC_9  , KC_0         ,KC_MINS,
      KC_TAB         , KC_Q       , KC_W  , KC_F  , KC_P  , KC_G  ,                         KC_J  , KC_L  , KC_U  , KC_Y  ,KC_SCLN       ,KC_BSLS,
-     TD(TD_ESC_CAPS), KC_A       , KC_R  , KC_S  , KC_T  , KC_D  ,                         KC_H  , KC_N  , KC_E  , KC_I  , KC_O         ,KC_QUOT,
+     TD(TD_ESC_CAPS), KC_A       , KC_R  , KC_S  , KC_T  , KC_D  ,                         KC_H  , KC_N  , KC_E  , KC_I  , FN_O         ,KC_QUOT,
      KC_LSFT        , CTL_T(KC_Z), KC_X  , KC_C  , KC_V  , KC_B  ,                         KC_K  , KC_M  ,KC_COMM,KC_DOT ,CTL_T(KC_SLSH),KC_RSFT,
                       KC_LEFT,KC_RGHT,                                                       KC_UP  , KC_DOWN,
                                       KC_BSPC     , KC_DEL,                             KC_ENT      ,  KC_SPC,
@@ -137,6 +138,42 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                       TD(ATL_OSL2), KC_LCTL,                      TD(GUI_OSL1), CTL_T(KC_ESC),
                                       TD(END_OSL3), TD(TD_HOM_INSR),              KC_PGUP     , KC_PGDN
   ),
+
+    /* Keymap 2: Media and mouse keys
+     *
+     * ,-------------------------------------------.                                                     ,-------------------------------------------.
+     * |        |      |      |      |      |      |                                                     |      |MS_AC1|MS_AC2|MS_AC3|      |BL_INC  |
+     * |--------+------+------+------+------+------|                                                     |------+------+------+------+------+--------|
+     * |        |      |      | MsUp |      |      |                                                     |      |MSWUP |MSWLT |MSWRT |      |BL_DEC  |
+     * |--------+------+------+------+------+------|                                                     |------+------+------+------+------+--------|
+     * |        |      |MsLeft|MsDown|MsRght|      |                                                     |      |Lclk  |Rclk  |      |      |  Play  |
+     * |--------+------+------+------+------+------|                                                     |------+------+------+------+------+--------|
+     * |        |RESET |      |      |      |      |                                                     |      |MSWDN | Prev | Next | Mute |RESET   |
+     * `--------+------+------+------+------+------'                                                     `------+------+------+------+------+--------'
+     *                 |      |      |                                                                                 |VolUp |VolDn | 
+     *                 `-------------'                                                                                 `-------------'
+     *                                       ,-------------.                                     ,-------------.         
+     *                                       |      |      |                                     |      |Brwser|         
+     *                                       |      |      |                                     |      |Back  |         
+     *                                       |      |      +---------------.     ,---------------+      |      |         
+     *                                       `-------------|       |       |     |       |       |-------------'         
+     *                                                     |-------+-------|     |-------+-------|                       
+     *                                                     |       |       |     |       |       |                       
+     *                                                     `---------------'     `---------------`
+     */
+    // MEDIA AND MOUSE
+    [_MDIA_MOUSE] = LAYOUT_5x6(
+            KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                  KC_TRNS, KC_ACL0, KC_ACL1, KC_ACL2, KC_TRNS, BL_INC,   
+            KC_TRNS, KC_TRNS, KC_TRNS, KC_MS_U, KC_TRNS, KC_TRNS,                  KC_TRNS, KC_WH_U, KC_WH_L, KC_WH_R, KC_TRNS, BL_DEC,   
+            KC_TRNS, KC_TRNS, KC_MS_L, KC_MS_D, KC_MS_R, KC_TRNS,                  KC_TRNS, KC_BTN1, KC_BTN2, KC_TRNS, KC_TRNS, KC_MPLY,
+            KC_TRNS, RESET,   KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                  KC_TRNS, KC_WH_D, KC_MPRV, KC_MNXT, KC_MUTE, RESET,  
+                       KC_TRNS, KC_TRNS,                                                 KC_VOLU, KC_VOLD, 
+                                      KC_TRNS, KC_TRNS,                           KC_TRNS     , KC_WBAK,
+                                      KC_TRNS, KC_TRNS,                           KC_TRNS     , KC_TRNS, 
+                                      KC_TRNS, KC_TRNS,                           KC_TRNS     , KC_TRNS
+            
+
+            ),
 
     /* keymap 3: symbols layer
      *
@@ -206,7 +243,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                       _______, _______,                        _______, _______,
                                       _______, _______,                        _______, _______,
                                       _______, _______,                        _______, _______
-  ),
+  )};
 
   /*[_LOWER] = LAYOUT_5x6(*/
 
@@ -221,17 +258,17 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   /*),*/
 
-  [_RAISE] = LAYOUT_5x6(
-       KC_F12 , KC_F1 , KC_F2 , KC_F3 , KC_F4 , KC_F5 ,                        KC_F6  , KC_F7 , KC_F8 , KC_F9 ,KC_F10 ,KC_F11 ,
-       _______,_______,_______,_______,_______,KC_LBRC,                        KC_RBRC,_______,KC_NLCK,KC_INS ,KC_SLCK,KC_MUTE,
-       _______,KC_LEFT,KC_UP  ,KC_DOWN,KC_RGHT,KC_LPRN,                        KC_RPRN,KC_MPRV,KC_MPLY,KC_MNXT,_______,KC_VOLU,
-       _______,_______,_______,_______,_______,_______,                        _______,_______,_______,_______,_______,KC_VOLD,
-                                               _______,_______,            KC_EQL ,_______,
-                                               _______,_______,            _______,_______,
-                                               _______,_______,            _______,_______,
-                                               _______,_______,            _______,_______
-  ),
-};
+  /*[_RAISE] = LAYOUT_5x6(*/
+       /*KC_F12 , KC_F1 , KC_F2 , KC_F3 , KC_F4 , KC_F5 ,                        KC_F6  , KC_F7 , KC_F8 , KC_F9 ,KC_F10 ,KC_F11 ,*/
+       /*_______,_______,_______,_______,_______,KC_LBRC,                        KC_RBRC,_______,KC_NLCK,KC_INS ,KC_SLCK,KC_MUTE,*/
+       /*_______,KC_LEFT,KC_UP  ,KC_DOWN,KC_RGHT,KC_LPRN,                        KC_RPRN,KC_MPRV,KC_MPLY,KC_MNXT,_______,KC_VOLU,*/
+       /*_______,_______,_______,_______,_______,_______,                        _______,_______,_______,_______,_______,KC_VOLD,*/
+                                               /*_______,_______,            KC_EQL ,_______,*/
+                                               /*_______,_______,            _______,_______,*/
+                                               /*_______,_______,            _______,_______,*/
+                                               /*_______,_______,            _______,_______*/
+  /*),*/
+/*};*/
 
 bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
 
