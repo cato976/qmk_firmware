@@ -21,10 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define USE_SERIAL
 
-#define MASTER_LEFT
-// #define MASTER_RIGHT
+//#define MASTER_LEFT
+ #define MASTER_RIGHT
 //#define EE_HANDS
 // Rows are doubled-up
 
 #define ONESHOT_TAP_TOGGLE 5
 #define ONESHOT_TIMEOUT 5000
+#define FORCE_NKRO
