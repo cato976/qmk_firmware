@@ -28,7 +28,9 @@ enum _ergodox_layers {
 
 enum custom_keycodes {
     CMDER = SAFE_RANGE,
-    VERT_PASS
+    VERT_PASS,
+    END_ZOOM,
+    END_TEAMS
 };
 
 //Tap Dance Declarations
@@ -237,8 +239,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [_MACRO] = LAYOUT_5x6(
      _______, _______     , _______, _______, _______, _______,                         _______, _______, _______, _______, _______  , _______,
      _______, DF(_QWERTY) , _______, _______, _______, _______,                         _______, _______, _______, _______, VERT_PASS, _______,
-     _______, DF(_COLEMAK), _______, _______, _______, _______,                         _______, _______, _______, _______, _______  , _______,
-     _______, _______     , _______, CMDER  , _______, _______,                         _______, _______, _______, _______, _______  , _______,
+     _______, DF(_COLEMAK), _______, _______, END_TEAMS,_______,                        _______, _______, _______, _______, _______  , _______,
+     _______, END_ZOOM    , _______, CMDER  , _______, _______,                         _______, _______, _______, _______, _______  , _______,
                       _______, _______,                                                       _______, _______,
                                       _______, _______,                        _______, _______,
                                       _______, _______,                        _______, _______,
@@ -285,6 +287,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *  record) {
                 SEND_STRING(SS_LSFT(SS_TAP(X_V))SS_TAP(X_3)SS_TAP(X_R)SS_TAP(X_T)SS_LSFT(SS_TAP(X_2))SS_TAP(X_F)SS_TAP(X_0)SS_TAP(X_R)SS_TAP(X_3));
                 return false;
             }
+            break;
+        case END_ZOOM:
+            if ( record->event.pressed) {
+                SEND_STRING(SS_TAP(X_LGUI)SS_TAP(X_T)SS_TAP(X_A)SS_TAP(X_S)SS_TAP(X_K)SS_TAP(X_K)SS_TAP(X_I)SS_TAP(X_L)SS_TAP(X_L)SS_TAP(X_SPACE)SS_TAP(X_SLASH)SS_LSFT(SS_TAP(X_I))SS_LSFT(SS_TAP(X_M))SS_TAP(X_SPACE)SS_LSFT(SS_TAP(X_QUOTE))SS_LSFT(SS_TAP(X_Z))SS_TAP(X_O)SS_TAP(X_O)SS_TAP(X_M)SS_TAP(X_DOT)SS_TAP(X_E)SS_TAP(X_X)SS_TAP(X_E)SS_LSFT(SS_TAP(X_QUOTE))SS_TAP(X_SPACE)SS_TAP(X_SLASH)SS_LSFT(SS_TAP(X_F))SS_TAP(X_ENTER));
+                return false;
+            }
+            break;
+        case END_TEAMS:
+            if ( record->event.pressed) {
+                SEND_STRING(SS_TAP(X_LGUI)SS_TAP(X_T)SS_TAP(X_E)SS_TAP(X_A)SS_TAP(X_M)SS_TAP(X_S)SS_TAP(X_ENTER));
+                SEND_STRING(SS_LCTRL(SS_LSFT(SS_TAP(X_B))));
+                return false;
+            }
+            break;
             break;
         default:
             return true;
